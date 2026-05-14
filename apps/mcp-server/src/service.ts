@@ -1,5 +1,5 @@
 import {
-  addMemory,
+  addMemoryFast,
   buyLicense,
   createPackDraft,
   deriveVaultMasterKeyFromSignature,
@@ -12,9 +12,9 @@ import {
   PackKind,
   PackLicenseClient,
   PackPreviewManifest,
+  publishVaultSnapshot,
   publishPack,
   pullVaultIndex,
-  pushVaultIndex,
   queryMemory,
   readPreviewManifest,
   syncVaultSnapshots,
@@ -23,6 +23,9 @@ import {
   ZeroGStorageReader,
   ZeroGStorageWriter
 } from "@kinetics/core";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { ZeroAddress } from "ethers";
 import { KineticsMcpConfig } from "./config.js";
 import { buildMemoryStats, buildMemorySummaryText, filterSearchablePacks, normalizeProofInput, packKindFromContract } from "./logic.js";
@@ -126,12 +129,58 @@ export class KineticsMcpService {
     return deriveVaultMasterKeyFromSignature(signature);
   }
 
+  private async snapshotCachePath(): Promise<string> {
+    const owner = (await this.ownerAddress()).toLowerCase();
+    const client = this.config.sourceClient.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
+    return path.join(os.homedir(), ".kinetics", "mcp-cache", `vault-${owner}-${client}.json`);
+  }
+
+  private async loadSnapshotFromDisk(): Promise<VaultSnapshot | undefined> {
+    try {
+      const cachePath = await this.snapshotCachePath();
+      const raw = await readFile(cachePath, "utf8");
+      return JSON.parse(raw) as VaultSnapshot;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async persistSnapshot(snapshot: VaultSnapshot): Promise<void> {
+    const cachePath = await this.snapshotCachePath();
+    await mkdir(path.dirname(cachePath), { recursive: true });
+    await writeFile(cachePath, JSON.stringify(snapshot), "utf8");
+  }
+
+  private hasPendingSnapshotSync(passState: Awaited<ReturnType<KineticsMcpService["getPassState"]>>, snapshot: VaultSnapshot): boolean {
+    return snapshot.version > Number(passState.latestIndexVersion);
+  }
+
+  private async getWorkingSnapshot(): Promise<{
+    passState: Awaited<ReturnType<KineticsMcpService["getPassState"]>>;
+    snapshot: VaultSnapshot;
+  }> {
+    const passState = await this.getPassState();
+    ensurePassExists(passState.vaultId);
+
+    if (this.snapshotCache) {
+      return { passState, snapshot: this.snapshotCache };
+    }
+
+    const persisted = await this.loadSnapshotFromDisk();
+    if (persisted && persisted.vaultId === Number(passState.vaultId)) {
+      this.snapshotCache = persisted;
+      return { passState, snapshot: persisted };
+    }
+
+    return this.pullLatestSnapshot();
+  }
+
   private async pullLatestSnapshot(indexBlobRoot?: string): Promise<{ passState: Awaited<ReturnType<KineticsMcpService["getPassState"]>>; snapshot: VaultSnapshot; }> {
     const passState = await this.getPassState();
     ensurePassExists(passState.vaultId);
 
     const vaultMasterKey = await this.getVaultMasterKey();
-    const snapshot = await pullVaultIndex({
+    const remoteSnapshot = await pullVaultIndex({
       owner: await this.ownerAddress(),
       memoryPass: this.memoryPass,
       storage: this.storageReader,
@@ -139,8 +188,9 @@ export class KineticsMcpService {
       indexBlobRoot
     });
 
-    this.snapshotCache = this.snapshotCache ? syncVaultSnapshots(this.snapshotCache, snapshot) : snapshot;
-    return { passState, snapshot };
+    this.snapshotCache = this.snapshotCache ? syncVaultSnapshots(this.snapshotCache, remoteSnapshot) : remoteSnapshot;
+    await this.persistSnapshot(this.snapshotCache);
+    return { passState, snapshot: this.snapshotCache };
   }
 
   async memoryPassStatus() {
@@ -249,15 +299,13 @@ export class KineticsMcpService {
     namespaces?: string[];
     memoryType: "episodic" | "semantic" | "procedural" | "working";
   }) {
+    const { passState, snapshot } = await this.getWorkingSnapshot();
     const vaultMasterKey = await this.getVaultMasterKey();
-    const receipt = await addMemory({
-      owner: await this.ownerAddress(),
-      memoryPass: this.memoryPass,
+    const receipt = await addMemoryFast({
+      passState,
+      snapshot,
       memoryRegistry: this.memoryRegistry,
-      storage: {
-        uploadBytes: this.storageWriter.uploadBytes.bind(this.storageWriter),
-        readBytes: this.storageReader.readBytes.bind(this.storageReader)
-      },
+      storage: this.storageWriter,
       vaultMasterKey,
       text: input.text,
       sourceClient: this.config.sourceClient,
@@ -268,17 +316,17 @@ export class KineticsMcpService {
         namespaces: normalizeTags(input.namespaces ?? [])
       }
     });
-
-    const current = await this.pullLatestSnapshot();
+    this.snapshotCache = receipt.snapshot;
+    await this.persistSnapshot(receipt.snapshot);
 
     return {
       ...receipt,
-      totalEntries: current.snapshot.entries.length
+      totalEntries: receipt.snapshot.entries.length
     };
   }
 
   async memoryQuery(query: string, topK: number) {
-    const { snapshot } = await this.pullLatestSnapshot();
+    const { snapshot } = await this.getWorkingSnapshot();
     const vaultMasterKey = await this.getVaultMasterKey();
     const results = await queryMemory({
       query,
@@ -297,7 +345,7 @@ export class KineticsMcpService {
   }
 
   async memorySummary() {
-    const { snapshot } = await this.pullLatestSnapshot();
+    const { snapshot } = await this.getWorkingSnapshot();
     return {
       snapshotVersion: snapshot.version,
       totalEntries: snapshot.entries.length,
@@ -306,12 +354,13 @@ export class KineticsMcpService {
   }
 
   async memoryStats() {
-    const passState = await this.getPassState();
-    ensurePassExists(passState.vaultId);
+    const { passState, snapshot } = await this.getWorkingSnapshot();
     const active = await this.memoryPass.isPassActive(passState.vaultId);
-    const { snapshot } = await this.pullLatestSnapshot();
 
-    return buildMemoryStats(passState, active, snapshot);
+    return {
+      ...buildMemoryStats(passState, active, snapshot),
+      pendingSnapshotSync: this.hasPendingSnapshotSync(passState, snapshot)
+    };
   }
 
   async memorySync() {
@@ -329,31 +378,38 @@ export class KineticsMcpService {
   }
 
   async memoryPushIndex() {
-    const { passState, snapshot } = await this.pullLatestSnapshot();
-    const vaultMasterKey = await this.getVaultMasterKey();
-    const nextSnapshot = {
-      ...snapshot,
-      version: snapshot.version + 1
-    };
+    const { passState, snapshot } = await this.getWorkingSnapshot();
+    if (!this.hasPendingSnapshotSync(passState, snapshot)) {
+      return {
+        snapshotVersion: snapshot.version,
+        snapshotBlobRoot: passState.latestIndexBlobRoot,
+        merkleRoot: snapshot.merkleRoot,
+        latestIndexTxHash: null,
+        pendingSnapshotSync: false,
+        note: "Local vault snapshot is already published."
+      };
+    }
 
-    const pushed = await pushVaultIndex({
-      snapshot: nextSnapshot,
+    const vaultMasterKey = await this.getVaultMasterKey();
+    const pushed = await publishVaultSnapshot({
+      snapshot,
       storage: this.storageWriter,
       vaultMasterKey,
       memoryPass: this.memoryPass,
-      memoryRegistry: this.memoryRegistry,
       passState
     });
-
-    this.snapshotCache = nextSnapshot;
+    this.snapshotCache = {
+      ...snapshot,
+      merkleRoot: pushed.merkleRoot
+    };
+    await this.persistSnapshot(this.snapshotCache);
 
     return {
-      snapshotVersion: nextSnapshot.version,
+      snapshotVersion: snapshot.version,
       snapshotBlobRoot: pushed.snapshotBlobRoot,
       merkleRoot: pushed.merkleRoot,
       latestIndexTxHash: pushed.latestIndexTxHash,
-      registryTxHash: pushed.registryTxHash,
-      daCommitment: pushed.daCommitment
+      pendingSnapshotSync: false
     };
   }
 

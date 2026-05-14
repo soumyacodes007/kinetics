@@ -119,7 +119,7 @@ export function registerKineticsTools(server: McpServer, service: KineticsMcpSer
     "memory_add",
     {
       title: "Add Private Memory",
-      description: "Encrypt and store a private memory entry, then push the updated vault snapshot and Merkle root on-chain.",
+      description: "Encrypt and store a private memory entry with a fast local vault update, then anchor the new memory root on-chain.",
       inputSchema: z.object({
         text: z.string().min(1),
         title: z.string().default(""),
@@ -182,7 +182,7 @@ export function registerKineticsTools(server: McpServer, service: KineticsMcpSer
     "memory_push_index",
     {
       title: "Push Memory Index",
-      description: "Upload a fresh encrypted snapshot of the current vault index and re-anchor the latest snapshot pointer on-chain.",
+      description: "Upload the current encrypted vault snapshot and update the Memory Pass latest-index pointer for cross-client sync.",
       inputSchema: z.object({})
     },
     async () => result(await service.memoryPushIndex())

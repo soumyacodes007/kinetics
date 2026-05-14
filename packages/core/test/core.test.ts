@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { keccak256, toUtf8Bytes } from "ethers";
 import {
   addMemory,
+  addMemoryFast,
   buildSortedMerkleTree,
   createPackDraft,
   decryptJson,
@@ -11,6 +12,7 @@ import {
   KINETICS_DEPLOYED_ADDRESSES,
   mountPack,
   publishAccessGrant,
+  publishVaultSnapshot,
   publishPack,
   queryMemory,
   rankVaultEntries,
@@ -226,6 +228,90 @@ describe("vault flow", () => {
     expect(results).toHaveLength(1);
     expect(results[0]?.text).toContain("Track 3");
     expect(results[0]?.proof.merkleRoot).toBe(receipt.merkleRoot);
+  });
+
+  it("supports fast local writes before an explicit snapshot publish", async () => {
+    const storage = new InMemoryStorage();
+    const passState: MemoryPassState = {
+      vaultId: 1n,
+      owner: "0xowner",
+      planId: 1n,
+      expiresAt: BigInt(Math.floor(Date.now() / 1000) + 3600),
+      storageQuotaBytes: 1024n * 1024n,
+      writeQuotaPerPeriod: 100n,
+      latestIndexVersion: 0n,
+      latestIndexRoot: "0x" + "00".repeat(32),
+      latestIndexBlobRoot: "0x" + "00".repeat(32)
+    };
+    const memoryPass = new FakeMemoryPass(passState);
+    const memoryRegistry = new FakeMemoryRegistry();
+    const vaultMasterKey = await deriveVaultMasterKeyFromSignature("0x" + "33".repeat(65));
+    const emptySnapshot: VaultSnapshot = {
+      vaultId: 1,
+      version: 0,
+      bytesUsed: 0,
+      writeCountCurrentPeriod: 0,
+      merkleRoot: "0x" + "00".repeat(32),
+      entries: []
+    };
+
+    const receipt = await addMemoryFast({
+      passState,
+      snapshot: emptySnapshot,
+      memoryRegistry,
+      storage,
+      vaultMasterKey,
+      text: "I prefer explicit sync for cross-agent sharing.",
+      sourceClient: "openclaw",
+      metadata: {
+        tags: ["sync", "mvp"],
+        namespaces: ["personal", "demo"]
+      }
+    });
+
+    expect(receipt.pendingSnapshotSync).toBe(true);
+    expect(receipt.snapshot.version).toBe(1);
+    expect(memoryPass.latestIndexCalls).toHaveLength(0);
+    expect(memoryRegistry.updates).toHaveLength(1);
+
+    const localResults = await queryMemory({
+      query: "how do I prefer cross agent sharing",
+      snapshot: receipt.snapshot,
+      storage,
+      vaultMasterKey,
+      topK: 1
+    });
+
+    expect(localResults).toHaveLength(1);
+    expect(localResults[0]?.text).toContain("explicit sync");
+
+    const published = await publishVaultSnapshot({
+      snapshot: receipt.snapshot,
+      storage,
+      vaultMasterKey,
+      memoryPass,
+      passState
+    });
+
+    expect(memoryPass.latestIndexCalls).toHaveLength(1);
+    expect(published.snapshotBlobRoot).toBe(passState.latestIndexBlobRoot);
+
+    const remoteSnapshot = await syncVaultSnapshots(emptySnapshot, await (async () => {
+      const bytes = await storage.readBytes(passState.latestIndexBlobRoot);
+      const ciphertextHex = new TextDecoder().decode(bytes);
+      return decryptJson<VaultSnapshot>(ciphertextHex, vaultMasterKey);
+    })());
+
+    const remoteResults = await queryMemory({
+      query: "cross agent sharing",
+      snapshot: remoteSnapshot,
+      storage,
+      vaultMasterKey,
+      topK: 1
+    });
+
+    expect(remoteResults).toHaveLength(1);
+    expect(remoteResults[0]?.text).toContain("explicit sync");
   });
 });
 

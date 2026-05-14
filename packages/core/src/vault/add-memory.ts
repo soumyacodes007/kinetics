@@ -5,7 +5,7 @@ import { MemoryPassState } from "../types/pass.js";
 import { encryptJson } from "../crypto/encrypt.js";
 import { WritableStorage } from "../storage/upload.js";
 import { pullVaultIndex, MemoryPassReader } from "./pull-index.js";
-import { pushVaultIndex, MemoryPassWriter, MemoryRegistryWriter } from "./push-index.js";
+import { computeLocalDaCommitment, computeVaultMerkleRoot, pushVaultIndex, MemoryPassWriter, MemoryRegistryWriter } from "./push-index.js";
 
 function deriveMetadata(text: string, metadata: MemoryMetadataInput): Required<MemoryMetadataInput> {
   const title = metadata.title?.trim() || deriveDefaultTitle(text);
@@ -35,6 +35,84 @@ function assertWritable(passState: MemoryPassState, snapshot: VaultSnapshot, new
   }
 }
 
+function appendMemoryToSnapshot(args: {
+  snapshot: VaultSnapshot;
+  passState: MemoryPassState;
+  memory: PrivateMemoryBlob;
+  plaintextBytes: Uint8Array;
+  blobRoot: string;
+}): VaultSnapshot {
+  return {
+    ...args.snapshot,
+    vaultId: Number(args.passState.vaultId),
+    version: args.snapshot.version + 1,
+    bytesUsed: args.snapshot.bytesUsed + args.plaintextBytes.length,
+    writeCountCurrentPeriod: args.snapshot.writeCountCurrentPeriod + 1,
+    merkleRoot: args.snapshot.merkleRoot,
+    entries: [
+      ...args.snapshot.entries,
+      {
+        memoryId: args.memory.memoryId,
+        blobRoot: args.blobRoot,
+        memoryType: args.memory.memoryType,
+        title: args.memory.plaintext.title,
+        summary: args.memory.plaintext.summary,
+        tags: args.memory.plaintext.tags,
+        namespaces: args.memory.plaintext.namespaces,
+        createdAt: args.memory.createdAt,
+        lastAccessedAt: args.memory.createdAt,
+        strength: 0.5,
+        stale: false,
+        sourceClient: args.memory.sourceClient
+      }
+    ]
+  };
+}
+
+async function uploadEncryptedMemory(args: {
+  storage: WritableStorage;
+  vaultMasterKey: Uint8Array;
+  text: string;
+  sourceClient: string;
+  memoryType: MemoryType;
+  metadata: Required<MemoryMetadataInput>;
+  passState: MemoryPassState;
+  now: number;
+}): Promise<{
+  memory: PrivateMemoryBlob;
+  plaintextBytes: Uint8Array;
+  blobRoot: string;
+}> {
+  const memory: PrivateMemoryBlob = {
+    vaultId: Number(args.passState.vaultId),
+    memoryId: createMemoryId(args.now * 1000),
+    memoryType: args.memoryType,
+    sourceClient: args.sourceClient,
+    createdAt: args.now,
+    updatedAt: args.now,
+    plaintext: {
+      title: args.metadata.title,
+      text: args.text,
+      summary: args.metadata.summary,
+      tags: args.metadata.tags,
+      namespaces: args.metadata.namespaces
+    }
+  };
+
+  const plaintextBytes = new TextEncoder().encode(JSON.stringify(memory));
+  const encryptedHex = await encryptJson(memory, args.vaultMasterKey);
+  const blobUpload = await args.storage.uploadBytes(
+    new TextEncoder().encode(encryptedHex),
+    `${memory.memoryId}.enc`
+  );
+
+  return {
+    memory,
+    plaintextBytes,
+    blobRoot: blobUpload.rootHash
+  };
+}
+
 export async function addMemory(args: {
   owner: string;
   memoryPass: MemoryPassReader & MemoryPassWriter;
@@ -57,56 +135,26 @@ export async function addMemory(args: {
   });
 
   const normalized = deriveMetadata(args.text, args.metadata ?? {});
-  const memory: PrivateMemoryBlob = {
-    vaultId: Number(passState.vaultId),
-    memoryId: createMemoryId(now * 1000),
-    memoryType: args.memoryType ?? "episodic",
+  const uploaded = await uploadEncryptedMemory({
+    storage: args.storage,
+    vaultMasterKey: args.vaultMasterKey,
+    text: args.text,
     sourceClient: args.sourceClient,
-    createdAt: now,
-    updatedAt: now,
-    plaintext: {
-      title: normalized.title,
-      text: args.text,
-      summary: normalized.summary,
-      tags: normalized.tags,
-      namespaces: normalized.namespaces
-    }
-  };
+    memoryType: args.memoryType ?? "episodic",
+    metadata: normalized,
+    passState,
+    now
+  });
 
-  const plaintextBytes = new TextEncoder().encode(JSON.stringify(memory));
+  const plaintextBytes = uploaded.plaintextBytes;
   assertWritable(passState, snapshot, plaintextBytes.length, now);
-
-  const encryptedHex = await encryptJson(memory, args.vaultMasterKey);
-  const blobUpload = await args.storage.uploadBytes(
-    new TextEncoder().encode(encryptedHex),
-    `${memory.memoryId}.enc`
-  );
-
-  const nextSnapshot: VaultSnapshot = {
-    ...snapshot,
-    vaultId: Number(passState.vaultId),
-    version: snapshot.version + 1,
-    bytesUsed: snapshot.bytesUsed + plaintextBytes.length,
-    writeCountCurrentPeriod: snapshot.writeCountCurrentPeriod + 1,
-    merkleRoot: snapshot.merkleRoot,
-    entries: [
-      ...snapshot.entries,
-      {
-        memoryId: memory.memoryId,
-        blobRoot: blobUpload.rootHash,
-        memoryType: memory.memoryType,
-        title: memory.plaintext.title,
-        summary: memory.plaintext.summary,
-        tags: memory.plaintext.tags,
-        namespaces: memory.plaintext.namespaces,
-        createdAt: now,
-        lastAccessedAt: now,
-        strength: 0.5,
-        stale: false,
-        sourceClient: memory.sourceClient
-      }
-    ]
-  };
+  const nextSnapshot = appendMemoryToSnapshot({
+    snapshot,
+    passState,
+    memory: uploaded.memory,
+    plaintextBytes,
+    blobRoot: uploaded.blobRoot
+  });
 
   const pushed = await pushVaultIndex({
     snapshot: nextSnapshot,
@@ -118,8 +166,8 @@ export async function addMemory(args: {
   });
 
   return {
-    memoryId: memory.memoryId,
-    blobRoot: blobUpload.rootHash,
+    memoryId: uploaded.memory.memoryId,
+    blobRoot: uploaded.blobRoot,
     snapshotBlobRoot: pushed.snapshotBlobRoot,
     merkleRoot: pushed.merkleRoot,
     snapshotVersion: nextSnapshot.version,
@@ -128,5 +176,58 @@ export async function addMemory(args: {
       registryTxHash: pushed.registryTxHash,
       daCommitment: pushed.daCommitment
     }
+  };
+}
+
+export async function addMemoryFast(args: {
+  passState: MemoryPassState;
+  snapshot: VaultSnapshot;
+  memoryRegistry: MemoryRegistryWriter;
+  storage: WritableStorage;
+  vaultMasterKey: Uint8Array;
+  text: string;
+  sourceClient: string;
+  memoryType?: MemoryType;
+  metadata?: MemoryMetadataInput;
+  now?: number;
+}): Promise<MemoryWriteReceipt & { snapshot: VaultSnapshot; pendingSnapshotSync: boolean }> {
+  const now = args.now ?? Math.floor(Date.now() / 1000);
+  const normalized = deriveMetadata(args.text, args.metadata ?? {});
+  const uploaded = await uploadEncryptedMemory({
+    storage: args.storage,
+    vaultMasterKey: args.vaultMasterKey,
+    text: args.text,
+    sourceClient: args.sourceClient,
+    memoryType: args.memoryType ?? "episodic",
+    metadata: normalized,
+    passState: args.passState,
+    now
+  });
+
+  assertWritable(args.passState, args.snapshot, uploaded.plaintextBytes.length, now);
+
+  const nextSnapshot = appendMemoryToSnapshot({
+    snapshot: args.snapshot,
+    passState: args.passState,
+    memory: uploaded.memory,
+    plaintextBytes: uploaded.plaintextBytes,
+    blobRoot: uploaded.blobRoot
+  });
+  const merkleRoot = computeVaultMerkleRoot(nextSnapshot);
+  nextSnapshot.merkleRoot = merkleRoot;
+  const daCommitment = computeLocalDaCommitment(uploaded.blobRoot, nextSnapshot.version);
+  const registryTxHash = await args.memoryRegistry.updateRoot(merkleRoot, daCommitment);
+
+  return {
+    memoryId: uploaded.memory.memoryId,
+    blobRoot: uploaded.blobRoot,
+    merkleRoot,
+    snapshotVersion: nextSnapshot.version,
+    chain: {
+      registryTxHash,
+      daCommitment
+    },
+    snapshot: nextSnapshot,
+    pendingSnapshotSync: true
   };
 }

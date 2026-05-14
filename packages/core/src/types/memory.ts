@@ -62,7 +62,7 @@ export interface MemoryMetadataInput {
 export interface MemoryWriteReceipt {
   memoryId: string;
   blobRoot: string;
-  snapshotBlobRoot: string;
+  snapshotBlobRoot?: string;
   merkleRoot: string;
   snapshotVersion: number;
   chain?: {

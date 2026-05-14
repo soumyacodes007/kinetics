@@ -23,6 +23,33 @@ export function computeLocalDaCommitment(snapshotBlobRoot: string, snapshotVersi
   return keccak256(toUtf8Bytes(`local:${snapshotBlobRoot}:v${snapshotVersion}`));
 }
 
+export async function publishVaultSnapshot(args: {
+  snapshot: VaultSnapshot;
+  storage: WritableStorage;
+  vaultMasterKey: Uint8Array;
+  memoryPass: MemoryPassWriter;
+  passState: MemoryPassState;
+}): Promise<{
+  snapshotBlobRoot: string;
+  latestIndexTxHash?: string;
+  merkleRoot: string;
+}> {
+  const merkleRoot = computeVaultMerkleRoot(args.snapshot);
+  const uploaded = await uploadEncryptedSnapshot(args.storage, { ...args.snapshot, merkleRoot }, args.vaultMasterKey);
+  const latestIndex = await args.memoryPass.setLatestIndex(
+    args.passState.vaultId,
+    args.snapshot.version,
+    merkleRoot,
+    uploaded.rootHash
+  );
+
+  return {
+    snapshotBlobRoot: uploaded.rootHash,
+    latestIndexTxHash: latestIndex.transactionHash,
+    merkleRoot
+  };
+}
+
 export async function pushVaultIndex(args: {
   snapshot: VaultSnapshot;
   storage: WritableStorage;
@@ -38,17 +65,21 @@ export async function pushVaultIndex(args: {
   daCommitment: string;
   merkleRoot: string;
 }> {
-  const merkleRoot = computeVaultMerkleRoot(args.snapshot);
-  const uploaded = await uploadEncryptedSnapshot(args.storage, { ...args.snapshot, merkleRoot }, args.vaultMasterKey);
-  const daCommitment = args.daCommitment ?? computeLocalDaCommitment(uploaded.rootHash, args.snapshot.version);
-  const latestIndex = await args.memoryPass.setLatestIndex(args.passState.vaultId, args.snapshot.version, merkleRoot, uploaded.rootHash);
-  const registryTxHash = await args.memoryRegistry.updateRoot(merkleRoot, daCommitment);
+  const published = await publishVaultSnapshot({
+    snapshot: args.snapshot,
+    storage: args.storage,
+    vaultMasterKey: args.vaultMasterKey,
+    memoryPass: args.memoryPass,
+    passState: args.passState
+  });
+  const daCommitment = args.daCommitment ?? computeLocalDaCommitment(published.snapshotBlobRoot, args.snapshot.version);
+  const registryTxHash = await args.memoryRegistry.updateRoot(published.merkleRoot, daCommitment);
 
   return {
-    snapshotBlobRoot: uploaded.rootHash,
-    latestIndexTxHash: latestIndex.transactionHash,
+    snapshotBlobRoot: published.snapshotBlobRoot,
+    latestIndexTxHash: published.latestIndexTxHash,
     registryTxHash,
     daCommitment,
-    merkleRoot
+    merkleRoot: published.merkleRoot
   };
 }

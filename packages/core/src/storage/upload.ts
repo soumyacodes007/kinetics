@@ -17,6 +17,15 @@ export interface WritableStorage {
   uploadBytes(bytes: Uint8Array, filename: string): Promise<UploadedRoot>;
 }
 
+const MVP_UPLOAD_OPTIONS = {
+  tags: "0x",
+  finalityRequired: true,
+  taskSize: 1,
+  expectedReplica: 1,
+  skipTx: false,
+  fee: 0n
+} as const;
+
 export class ZeroGStorageWriter implements WritableStorage {
   constructor(private readonly config: ZeroGStorageConfig) {}
 
@@ -31,7 +40,12 @@ export class ZeroGStorageWriter implements WritableStorage {
           throw new Error(`0G merkle tree generation failed: ${treeErr?.message ?? "unknown error"}`);
         }
 
-        const [tx, uploadErr] = await indexer.upload(file, this.config.blockchainRpc, this.config.signer as any);
+        const [tx, uploadErr] = await indexer.upload(
+          file,
+          this.config.blockchainRpc,
+          this.config.signer as any,
+          MVP_UPLOAD_OPTIONS
+        );
         if (uploadErr || tx === null) {
           throw new Error(`0G upload failed: ${uploadErr?.message ?? "unknown error"}`);
         }
