@@ -34,6 +34,14 @@ export class PackLicenseClient {
     return this.contract().getBuyerLicenseIds(buyer);
   }
 
+  async getTotalSupply(): Promise<bigint> {
+    return this.contract().totalSupply();
+  }
+
+  async getCreatorBalance(creator: string): Promise<bigint> {
+    return this.contract().creatorBalances(creator);
+  }
+
   async getLicenseIdForPackBuyer(packId: number | bigint, buyer: string): Promise<bigint> {
     return this.contract().packBuyerToLicenseId(packId, buyer);
   }
