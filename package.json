@@ -11,5 +11,8 @@
     "build:mcp": "npm run build --workspace @kinetics/mcp-server",
     "test:mcp": "npm run test --workspace @kinetics/mcp-server",
     "generate:abi": "npm run generate --workspace @kinetics/abi"
+  },
+  "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.9"
   }
 }

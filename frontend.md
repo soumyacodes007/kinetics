@@ -408,6 +408,12 @@ Use the same signing convention as the shared package and plan:
 - EIP-712 domain name: `0G Mem`
 - typed message fields: `vaultId`, `version`
 
+MVP rule:
+
+- use a stable vault-key rotation version such as `0` for now
+- do not derive a new vault master key from the live snapshot version on every write
+- key rotation can be added later, but Demo A needs one stable vault key across clients
+
 Do not:
 
 - derive encryption keys from raw private keys

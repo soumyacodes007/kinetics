@@ -10,7 +10,7 @@ import {
 export interface ContractClientsConfig {
   rpcUrl: string;
   signer?: Signer;
-  addresses?: Partial<typeof KINETICS_DEPLOYED_ADDRESSES>;
+  addresses?: Partial<Record<keyof typeof KINETICS_DEPLOYED_ADDRESSES, string>>;
 }
 
 export function getProvider(config: ContractClientsConfig): JsonRpcProvider {
@@ -30,7 +30,13 @@ export function getContract(name: "KnowledgePackNFT", config: ContractClientsCon
 export function getContract(name: "PackLicenseRegistry", config: ContractClientsConfig): Contract;
 export function getContract(name: keyof typeof KINETICS_DEPLOYED_ADDRESSES, config: ContractClientsConfig): Contract {
   const provider = getProvider(config);
-  const runner = config.signer ?? provider;
+  const signerWithProvider =
+    config.signer && "provider" in config.signer && config.signer.provider
+      ? config.signer
+      : config.signer && "connect" in (config.signer as object)
+        ? (config.signer as Signer & { connect(provider: JsonRpcProvider): Signer }).connect(provider)
+        : config.signer;
+  const runner = signerWithProvider ?? provider;
 
   switch (name) {
     case "MemoryPass":

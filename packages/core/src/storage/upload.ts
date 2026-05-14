@@ -1,4 +1,4 @@
-import { Indexer, ZgFile } from "@0glabs/0g-ts-sdk";
+import { Indexer, ZgFile } from "@0gfoundation/0g-storage-ts-sdk";
 import { Signer } from "ethers";
 import { withTempFile } from "../utils/temp-file.js";
 
@@ -39,10 +39,14 @@ export class ZeroGStorageWriter implements WritableStorage {
         if (!rootHash) {
           throw new Error("0G upload failed: root hash missing");
         }
+        const transactionHash = "txHash" in tx ? tx.txHash : tx.txHashes[0];
+        if (!transactionHash) {
+          throw new Error("0G upload failed: transaction hash missing");
+        }
 
         return {
           rootHash,
-          transactionHash: tx.txHash
+          transactionHash
         };
       } finally {
         await file.close();
