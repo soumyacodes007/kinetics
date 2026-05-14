@@ -1,0 +1,32 @@
+{
+  "name": "@kinetics/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    }
+  },
+  "scripts": {
+    "build": "npm run build --workspace @kinetics/abi && tsc -p tsconfig.json",
+    "test": "npm run build --workspace @kinetics/abi && vitest run"
+  },
+  "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.9",
+    "@kinetics/abi": "file:../abi",
+    "ethers": "6.13.1",
+    "merkletreejs": "^0.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.4"
+  }
+}

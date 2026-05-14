@@ -4,6 +4,13 @@ import { loadConfigFromEnv } from "./config.js";
 import { registerKineticsTools } from "./handlers.js";
 import { KineticsMcpService } from "./service.js";
 
+function logLifecycle(message: string, error?: unknown): void {
+  console.error(`[kinetics-mcp] ${message}`);
+  if (error) {
+    console.error(error);
+  }
+}
+
 async function main(): Promise<void> {
   const config = loadConfigFromEnv();
   const service = new KineticsMcpService(config);
@@ -23,14 +30,45 @@ async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  process.on("SIGINT", async () => {
+  process.stdin.resume();
+  const keepAlive = setInterval(() => {
+    // Claude Desktop can otherwise let the process exit after initialize.
+  }, 60_000);
+
+  const shutdown = async (signal: string) => {
+    logLifecycle(`received ${signal}, shutting down`);
+    clearInterval(keepAlive);
     await server.close();
     process.exit(0);
+  };
+
+  process.on("SIGINT", () => {
+    void shutdown("SIGINT");
+  });
+  process.on("SIGTERM", () => {
+    void shutdown("SIGTERM");
+  });
+  process.on("uncaughtException", (error) => {
+    logLifecycle("uncaught exception", error);
+    process.exit(1);
+  });
+  process.on("unhandledRejection", (error) => {
+    logLifecycle("unhandled rejection", error);
+    process.exit(1);
+  });
+  process.on("beforeExit", (code) => {
+    logLifecycle(`beforeExit ${code}`);
+  });
+  process.on("exit", (code) => {
+    logLifecycle(`exit ${code}`);
+  });
+
+  await new Promise<void>(() => {
+    // Intentionally never resolves; lifetime is controlled by signals/transport shutdown.
   });
 }
 
 main().catch((error: unknown) => {
-  console.error("[kinetics-mcp] fatal startup error");
-  console.error(error);
+  logLifecycle("fatal startup error", error);
   process.exit(1);
 });

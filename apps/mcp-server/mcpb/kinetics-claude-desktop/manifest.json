@@ -1,0 +1,64 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
+  "manifest_version": "0.4",
+  "name": "kinetics-0g-memory",
+  "display_name": "Kinetics 0G Memory",
+  "version": "0.1.1",
+  "description": "Use Kinetics private memory passes and marketplace tools from Claude Desktop over the live 0G testnet.",
+  "author": {
+    "name": "Soumy"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ],
+      "env": {
+        "KINETICS_PRIVATE_KEY": "${user_config.private_key}",
+        "KINETICS_RPC_URL": "${user_config.rpc_url}",
+        "KINETICS_INDEXER_RPC": "${user_config.indexer_rpc_url}",
+        "KINETICS_SOURCE_CLIENT": "${user_config.source_client}"
+      }
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "win32",
+      "darwin"
+    ],
+    "runtimes": {
+      "node": ">=20"
+    }
+  },
+  "user_config": {
+    "private_key": {
+      "type": "string",
+      "title": "0G Private Key",
+      "description": "Hex private key for the wallet Claude Desktop should use with Kinetics.",
+      "required": true,
+      "sensitive": true
+    },
+    "rpc_url": {
+      "type": "string",
+      "title": "0G RPC URL",
+      "description": "RPC endpoint for 0G chain reads and writes.",
+      "default": "https://evmrpc-testnet.0g.ai"
+    },
+    "indexer_rpc_url": {
+      "type": "string",
+      "title": "0G Storage Indexer URL",
+      "description": "Indexer endpoint for 0G storage uploads and reads.",
+      "default": "https://indexer-storage-testnet-turbo.0g.ai"
+    },
+    "source_client": {
+      "type": "string",
+      "title": "Client Label",
+      "description": "Source client label stored in local vault state for this Claude Desktop install.",
+      "default": "claude-desktop"
+    }
+  },
+  "license": "MIT"
+}
