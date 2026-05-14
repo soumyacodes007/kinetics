@@ -12,6 +12,7 @@ import {
   PackKind,
   PackLicenseClient,
   PackPreviewManifest,
+  publishAccessGrant as publishBuyerAccessGrant,
   publishVaultSnapshot,
   publishPack,
   pullVaultIndex,
@@ -65,6 +66,17 @@ export interface PublishDraftInput {
   licenseDurationDays: number;
 }
 
+interface CreatorPackVersionRecord {
+  packId: number;
+  version: number;
+  previewRoot: string;
+  bundleRoot: string;
+  versionKeyHex: string;
+  slug: string;
+  title: string;
+  updatedAt: number;
+}
+
 export class KineticsMcpService {
   private readonly ownerAddressPromise: Promise<string>;
   private readonly storageReader: ZeroGStorageReader;
@@ -75,6 +87,7 @@ export class KineticsMcpService {
   private readonly packLicense: PackLicenseClient;
   private snapshotCache?: VaultSnapshot;
   private mountedPacks: MountedPack[] = [];
+  private creatorPackVersions?: CreatorPackVersionRecord[];
 
   constructor(private readonly config: KineticsMcpConfig) {
     this.ownerAddressPromise = this.config.wallet.getAddress();
@@ -149,6 +162,56 @@ export class KineticsMcpService {
     const cachePath = await this.snapshotCachePath();
     await mkdir(path.dirname(cachePath), { recursive: true });
     await writeFile(cachePath, JSON.stringify(snapshot), "utf8");
+  }
+
+  private async creatorPackVersionsPath(): Promise<string> {
+    const owner = (await this.ownerAddress()).toLowerCase();
+    return path.join(os.homedir(), ".kinetics", "mcp-cache", `creator-packs-${owner}.json`);
+  }
+
+  private async loadCreatorPackVersions(): Promise<CreatorPackVersionRecord[]> {
+    if (this.creatorPackVersions) {
+      return this.creatorPackVersions;
+    }
+
+    try {
+      const cachePath = await this.creatorPackVersionsPath();
+      const raw = await readFile(cachePath, "utf8");
+      this.creatorPackVersions = JSON.parse(raw) as CreatorPackVersionRecord[];
+    } catch {
+      this.creatorPackVersions = [];
+    }
+
+    return this.creatorPackVersions;
+  }
+
+  private async persistCreatorPackVersions(): Promise<void> {
+    const cachePath = await this.creatorPackVersionsPath();
+    await mkdir(path.dirname(cachePath), { recursive: true });
+    await writeFile(cachePath, JSON.stringify(this.creatorPackVersions ?? []), "utf8");
+  }
+
+  private async rememberCreatorPackVersion(record: CreatorPackVersionRecord): Promise<void> {
+    const records = await this.loadCreatorPackVersions();
+    const next = records.filter((entry) => !(entry.packId === record.packId && entry.version === record.version));
+    next.push(record);
+    next.sort((left, right) => (left.packId - right.packId) || (left.version - right.version));
+    this.creatorPackVersions = next;
+    await this.persistCreatorPackVersions();
+  }
+
+  private async getCreatorPackVersion(packId: number, version?: number): Promise<CreatorPackVersionRecord | undefined> {
+    const records = await this.loadCreatorPackVersions();
+    const candidates = records.filter((entry) => entry.packId === packId);
+    if (candidates.length === 0) {
+      return undefined;
+    }
+
+    if (typeof version === "number") {
+      return candidates.find((entry) => entry.version === version);
+    }
+
+    return [...candidates].sort((left, right) => right.version - left.version)[0];
   }
 
   private hasPendingSnapshotSync(passState: Awaited<ReturnType<KineticsMcpService["getPassState"]>>, snapshot: VaultSnapshot): boolean {
@@ -696,6 +759,16 @@ export class KineticsMcpService {
         existingPackId,
         existingVersion: nextVersion
       });
+      await this.rememberCreatorPackVersion({
+        packId: existingPackId,
+        version: nextVersion,
+        previewRoot: published.previewRoot,
+        bundleRoot: published.bundleRoot,
+        versionKeyHex: published.versionKeyHex,
+        slug: draft.manifest.slug,
+        title: draft.manifest.title,
+        updatedAt: Math.floor(Date.now() / 1000)
+      });
 
       return {
         mode: "version",
@@ -722,6 +795,16 @@ export class KineticsMcpService {
     if (packId === 0) {
       throw new Error("Unable to determine the minted pack id");
     }
+    await this.rememberCreatorPackVersion({
+      packId,
+      version: 1,
+      previewRoot: published.previewRoot,
+      bundleRoot: published.bundleRoot,
+      versionKeyHex: published.versionKeyHex,
+      slug: draft.manifest.slug,
+      title: draft.manifest.title,
+      updatedAt: Math.floor(Date.now() / 1000)
+    });
 
     await this.knowledgePack.setSaleTerms(
       packId,
@@ -744,5 +827,54 @@ export class KineticsMcpService {
 
   async skillPublishVersion(packId: number, draft: PublishDraftInput) {
     return this.publishDraft(draft, packId);
+  }
+
+  async skillPublishAccessGrant(licenseId: number, version?: number) {
+    const license = await this.packLicense.getLicense(licenseId);
+    if (license.licenseId === 0n || license.buyer === ZeroAddress) {
+      throw new Error(`License ${licenseId} was not found`);
+    }
+
+    const packId = Number(license.packId);
+    const pack = await this.knowledgePack.getPack(packId);
+    const owner = await this.ownerAddress();
+    if (pack.creator.toLowerCase() !== owner.toLowerCase()) {
+      throw new Error(`Configured wallet is not the creator of pack ${packId}`);
+    }
+
+    const targetVersion = version ?? Number(pack.currentVersion);
+    const packVersion = await this.getCreatorPackVersion(packId, targetVersion);
+    if (!packVersion) {
+      throw new Error(
+        `No local creator metadata found for pack ${packId} version ${targetVersion}. ` +
+          "Publish that version from this MCP wallet before issuing grants."
+      );
+    }
+
+    const publishedGrant = await publishBuyerAccessGrant({
+      grant: {
+        licenseId,
+        packId,
+        version: packVersion.version,
+        previewRoot: packVersion.previewRoot,
+        bundleRoot: packVersion.bundleRoot,
+        encryptedVersionKey: packVersion.versionKeyHex,
+        issuedAt: Math.floor(Date.now() / 1000),
+        expiresAt: Number(license.expiresAt)
+      },
+      storage: this.storageWriter,
+      licenseRegistry: this.packLicense
+    });
+
+    return {
+      licenseId,
+      packId,
+      version: packVersion.version,
+      previewRoot: packVersion.previewRoot,
+      bundleRoot: packVersion.bundleRoot,
+      grantRoot: publishedGrant.rootHash,
+      storageTxHash: publishedGrant.transactionHash,
+      publishTxHash: publishedGrant.publishTxHash
+    };
   }
 }

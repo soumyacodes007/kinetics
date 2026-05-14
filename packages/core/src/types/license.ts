@@ -14,6 +14,7 @@ export interface BuyerAccessGrant {
   licenseId: number;
   packId: number;
   version: number;
+  previewRoot: string;
   bundleRoot: string;
   encryptedVersionKey: string;
   issuedAt: number;

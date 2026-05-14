@@ -352,6 +352,7 @@ describe("pack publishing and mounting", () => {
       licenseId: 91,
       packId: 1,
       version: 1,
+      previewRoot: published.previewRoot,
       bundleRoot: published.bundleRoot,
       encryptedVersionKey: published.versionKeyHex,
       issuedAt: 1,
@@ -365,6 +366,15 @@ describe("pack publishing and mounting", () => {
     });
 
     expect(grantPublisher.published[0]?.grantRoot).toBe(grantResult.rootHash);
+
+    const newerManifest = {
+      ...manifest,
+      currentVersion: 2,
+      shortDescription: "Newer manifest that should not be used for v1 grants."
+    };
+    const newerPreviewRoot = (await storage.uploadBytes(
+      new TextEncoder().encode(JSON.stringify(newerManifest))
+    )).rootHash;
 
     const mounted = await mountPack({
       licenseId: 91,
@@ -390,7 +400,7 @@ describe("pack publishing and mounting", () => {
       knowledgePack: {
         async getPack() {
           return {
-            currentPreviewRoot: published.previewRoot
+            currentPreviewRoot: newerPreviewRoot
           };
         }
       },
@@ -400,6 +410,8 @@ describe("pack publishing and mounting", () => {
     expect(mounted.packId).toBe(1);
     expect(mounted.bundle.files[0]?.path).toBe("SKILL.md");
     expect(mounted.manifest.slug).toBe("solidity-research-pack");
+    expect(mounted.manifest.currentVersion).toBe(1);
+    expect(mounted.manifest.shortDescription).toBe("Audit patterns and workflows");
   });
 });
 

@@ -273,6 +273,19 @@ export function registerKineticsTools(server: McpServer, service: KineticsMcpSer
   );
 
   server.registerTool(
+    "skill_publish_access_grant",
+    {
+      title: "Publish Skill Access Grant",
+      description: "As the pack creator, publish a buyer access grant for a license using locally cached pack version metadata.",
+      inputSchema: z.object({
+        license_id: z.number().int().positive(),
+        version: z.number().int().positive().optional()
+      })
+    },
+    async ({ license_id, version }) => result(await service.skillPublishAccessGrant(license_id, version))
+  );
+
+  server.registerTool(
     "skill_unmount",
     {
       title: "Unmount Skill Pack",

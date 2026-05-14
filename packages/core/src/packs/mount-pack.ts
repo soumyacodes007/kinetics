@@ -29,8 +29,7 @@ export async function mountPack(args: {
   }
 
   const grant = await readBuyerAccessGrant(args.storage, license.latestGrantRoot);
-  const manifestState = await args.knowledgePack.getPack(license.packId);
-  const manifest = await readPreviewManifest(args.storage, manifestState.currentPreviewRoot);
+  const manifest = await readPreviewManifest(args.storage, grant.previewRoot);
   const bundle = await readEncryptedPackBundle(args.storage, grant.bundleRoot, hexToBytes(grant.encryptedVersionKey));
 
   return {

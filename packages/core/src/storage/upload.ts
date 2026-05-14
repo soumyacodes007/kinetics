@@ -1,4 +1,7 @@
 import { Indexer, ZgFile } from "@0gfoundation/0g-storage-ts-sdk";
+import { mkdir, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { Signer } from "ethers";
 import { withTempFile } from "../utils/temp-file.js";
 
@@ -6,6 +9,7 @@ export interface ZeroGStorageConfig {
   indexerRpc: string;
   blockchainRpc: string;
   signer: Signer;
+  cacheDir?: string;
 }
 
 export interface UploadedRoot {
@@ -19,7 +23,7 @@ export interface WritableStorage {
 
 const MVP_UPLOAD_OPTIONS = {
   tags: "0x",
-  finalityRequired: true,
+  finalityRequired: false,
   taskSize: 1,
   expectedReplica: 1,
   skipTx: false,
@@ -28,6 +32,14 @@ const MVP_UPLOAD_OPTIONS = {
 
 export class ZeroGStorageWriter implements WritableStorage {
   constructor(private readonly config: ZeroGStorageConfig) {}
+
+  private cacheDir(): string {
+    return this.config.cacheDir ?? path.join(os.homedir(), ".kinetics", "storage-cache");
+  }
+
+  private cachePathFor(rootHash: string): string {
+    return path.join(this.cacheDir(), `${rootHash.replace(/^0x/i, "").toLowerCase()}.bin`);
+  }
 
   async uploadBytes(bytes: Uint8Array, filename: string): Promise<UploadedRoot> {
     return withTempFile(bytes, filename, async (filePath) => {
@@ -57,6 +69,8 @@ export class ZeroGStorageWriter implements WritableStorage {
         if (!transactionHash) {
           throw new Error("0G upload failed: transaction hash missing");
         }
+        await mkdir(this.cacheDir(), { recursive: true });
+        await writeFile(this.cachePathFor(rootHash), bytes);
 
         return {
           rootHash,
