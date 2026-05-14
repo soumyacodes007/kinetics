@@ -10,12 +10,14 @@ contracts/.env
 # Node / package manager
 node_modules/
 contracts/node_modules/
+packages/*/node_modules/
 npm-debug.log*
 
 # Solidity build outputs
 contracts/artifacts/
 contracts/cache/
 contracts/coverage/
+packages/*/dist/
 
 # OS / editor noise
 .DS_Store

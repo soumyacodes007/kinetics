@@ -1,7 +1,11 @@
 import { getBytes, hexlify, isHexString, zeroPadValue } from "ethers";
 
 export function ensureHex(input: string): string {
-  return input.startsWith("0x") ? input : `0x${input}`;
+  const withPrefix = input.startsWith("0x") ? input : `0x${input}`;
+  if (withPrefix.length % 2 === 1) {
+    return `0x0${withPrefix.slice(2)}`;
+  }
+  return withPrefix;
 }
 
 export function ensureHex32(input: string): string {

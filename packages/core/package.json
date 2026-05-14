@@ -12,8 +12,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "build": "npm run build --workspace @kinetics/abi && tsc -p tsconfig.json",
+    "test": "npm run build --workspace @kinetics/abi && vitest run"
   },
   "dependencies": {
     "@0glabs/0g-ts-sdk": "^0.3.3",

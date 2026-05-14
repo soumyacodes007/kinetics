@@ -24,3 +24,5 @@ export const KINETICS_0G_TESTNET: KineticsChainConfig = {
   explorerUrl: "https://chainscan-galileo.0g.ai",
   contracts: KINETICS_DEPLOYED_ADDRESSES
 };
+
+export { KINETICS_DEPLOYED_ADDRESSES };

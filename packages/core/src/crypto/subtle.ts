@@ -1,4 +1,4 @@
-export async function getSubtleCrypto(): Promise<SubtleCrypto> {
+export async function getSubtleCrypto(): Promise<any> {
   if (globalThis.crypto?.subtle) {
     return globalThis.crypto.subtle;
   }
@@ -7,7 +7,7 @@ export async function getSubtleCrypto(): Promise<SubtleCrypto> {
   return webcrypto.subtle;
 }
 
-export async function getCrypto(): Promise<Crypto> {
+export async function getCrypto(): Promise<any> {
   if (globalThis.crypto) {
     return globalThis.crypto;
   }
