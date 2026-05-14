@@ -30,6 +30,14 @@ export class PackLicenseClient {
     };
   }
 
+  async getBuyerLicenseIds(buyer: string): Promise<bigint[]> {
+    return this.contract().getBuyerLicenseIds(buyer);
+  }
+
+  async getLicenseIdForPackBuyer(packId: number | bigint, buyer: string): Promise<bigint> {
+    return this.contract().packBuyerToLicenseId(packId, buyer);
+  }
+
   async buyLicense(packId: number | bigint, buyerPubkey: string | Uint8Array, priceWei: bigint): Promise<string> {
     const bytes = typeof buyerPubkey === "string" ? toUtf8Bytes(buyerPubkey) : buyerPubkey;
     const tx = await this.contract().buyLicense(packId, bytes, { value: priceWei });

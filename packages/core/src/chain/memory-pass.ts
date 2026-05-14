@@ -27,6 +27,25 @@ export class MemoryPassClient {
     };
   }
 
+  async getNextPlanId(): Promise<bigint> {
+    return this.contract().nextPlanId();
+  }
+
+  async getPass(vaultId: number | bigint): Promise<MemoryPassState> {
+    const state = await this.contract().getPass(vaultId);
+    return {
+      vaultId: state[0],
+      owner: state[1],
+      planId: state[2],
+      expiresAt: state[3],
+      storageQuotaBytes: state[4],
+      writeQuotaPerPeriod: state[5],
+      latestIndexVersion: state[6],
+      latestIndexRoot: ensureHex32(state[7]),
+      latestIndexBlobRoot: ensureHex32(state[8])
+    };
+  }
+
   async getPassByOwner(owner: string): Promise<MemoryPassState> {
     const state = await this.contract().getPassByOwner(owner);
     return {

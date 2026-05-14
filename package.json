@@ -2,11 +2,14 @@
   "name": "kinetics",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace @kinetics/abi && npm run build --workspace @kinetics/core",
-    "test": "npm run test --workspace @kinetics/core",
+    "build": "npm run build --workspace @kinetics/abi && npm run build --workspace @kinetics/core && npm run build --workspace @kinetics/mcp-server",
+    "test": "npm run test --workspace @kinetics/core && npm run test --workspace @kinetics/mcp-server",
+    "build:mcp": "npm run build --workspace @kinetics/mcp-server",
+    "test:mcp": "npm run test --workspace @kinetics/mcp-server",
     "generate:abi": "npm run generate --workspace @kinetics/abi"
   }
 }

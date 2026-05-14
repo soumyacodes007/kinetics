@@ -43,6 +43,14 @@ export class KnowledgePackClient {
     };
   }
 
+  async getTotalSupply(): Promise<bigint> {
+    return this.contract().totalSupply();
+  }
+
+  async getCreatorPackIds(creator: string): Promise<bigint[]> {
+    return this.contract().getCreatorPackIds(creator);
+  }
+
   async mintPack(slug: string, packKind: number, previewRoot: string, bundleRoot: string): Promise<string> {
     const tx = await this.contract().mintPack(slug, packKind, ensureHex32(previewRoot), ensureHex32(bundleRoot));
     return waitForReceipt(tx);
