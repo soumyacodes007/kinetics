@@ -1,6 +1,3 @@
-/0g-agent-skills
-/0G-Mem
-
 # Environment files
 .env
 .env.local
@@ -16,12 +13,3 @@ npm-debug.log*
 contracts/artifacts/
 contracts/cache/
 contracts/coverage/
-
-# OS / editor noise
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-
-# Temporary logs
-*.log
