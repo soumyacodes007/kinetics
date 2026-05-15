@@ -91,7 +91,7 @@ export function registerKineticsTools(server, service) {
     }, async ({ text, title, tags, namespaces, memory_type }) => result(await service.memoryAdd({ text, title, tags, namespaces, memoryType: memory_type })));
     server.registerTool("memory_query", {
         title: "Query Private Memory",
-        description: "Retrieve relevant encrypted private memories, decrypt the top matches, and return inclusion proofs.",
+        description: "Search only the private memory vault for entries whose title, summary, tags, namespaces, or text match the query. Use specific names, phrases, tags, or topics. Broad words like plan, info, or test are not good inventory queries and may return no results if no stored memory actually matches.",
         inputSchema: z.object({
             query: z.string().min(1),
             top_k: z.number().int().min(1).max(20).default(5)
@@ -99,7 +99,7 @@ export function registerKineticsTools(server, service) {
     }, async ({ query, top_k }) => result(await service.memoryQuery(query, top_k)));
     server.registerTool("memory_summary", {
         title: "Summarize Private Memory",
-        description: "Return a plain-English summary of the current vault snapshot.",
+        description: "Return a plain-English summary of what is currently stored in the private vault snapshot.",
         inputSchema: z.object({})
     }, async () => {
         const summary = await service.memorySummary();
@@ -107,7 +107,7 @@ export function registerKineticsTools(server, service) {
     });
     server.registerTool("memory_stats", {
         title: "Memory Stats",
-        description: "Return vault usage, counts by memory type, quota information, and recent items.",
+        description: "Return vault usage, counts by memory type, quota information, and recent items. Use this when you want inventory or overview rather than semantic recall.",
         inputSchema: z.object({})
     }, async () => result(await service.memoryStats()));
     server.registerTool("memory_sync", {

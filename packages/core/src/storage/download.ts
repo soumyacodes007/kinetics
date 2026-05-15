@@ -2,6 +2,7 @@ import { Indexer } from "@0gfoundation/0g-storage-ts-sdk";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { withSuppressedStdout } from "../utils/silent-stdout.js";
 import { readFileBytes } from "../utils/temp-file.js";
 
 export interface ReadableStorage {
@@ -44,7 +45,9 @@ export class ZeroGStorageReader implements ReadableStorage {
     const outputPath = path.join(dir, "payload.bin");
 
     try {
-      const err = await indexer.download(rootHash, outputPath, verified);
+      const err = await withSuppressedStdout(() =>
+        indexer.download(rootHash, outputPath, verified)
+      );
       if (err) {
         throw err;
       }

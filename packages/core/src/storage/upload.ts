@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Signer } from "ethers";
+import { withSuppressedStdout } from "../utils/silent-stdout.js";
 import { withTempFile } from "../utils/temp-file.js";
 
 export interface ZeroGStorageConfig {
@@ -52,11 +53,13 @@ export class ZeroGStorageWriter implements WritableStorage {
           throw new Error(`0G merkle tree generation failed: ${treeErr?.message ?? "unknown error"}`);
         }
 
-        const [tx, uploadErr] = await indexer.upload(
-          file,
-          this.config.blockchainRpc,
-          this.config.signer as any,
-          MVP_UPLOAD_OPTIONS
+        const [tx, uploadErr] = await withSuppressedStdout(() =>
+          indexer.upload(
+            file,
+            this.config.blockchainRpc,
+            this.config.signer as any,
+            MVP_UPLOAD_OPTIONS
+          )
         );
         if (uploadErr || tx === null) {
           throw new Error(`0G upload failed: ${uploadErr?.message ?? "unknown error"}`);

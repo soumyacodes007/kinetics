@@ -163,6 +163,27 @@ describe("retrieval", () => {
     expect(ranked[0]?.entry.memoryId).toBe("1");
     expect(ranked[0]?.finalScore).toBeGreaterThan(ranked[1]?.finalScore ?? 0);
   });
+
+  it("filters out unrelated entries with no lexical overlap", () => {
+    const ranked = rankVaultEntries("plan", [
+      {
+        memoryId: "1",
+        blobRoot: keccak256(toUtf8Bytes("1")),
+        memoryType: "episodic",
+        title: "Hackathon preference",
+        summary: "Preferred track is Track 3",
+        tags: ["hackathon", "preference"],
+        namespaces: ["personal", "hackathon"],
+        createdAt: Math.floor(Date.now() / 1000),
+        lastAccessedAt: 0,
+        strength: 0.8,
+        stale: false,
+        sourceClient: "openclaw"
+      }
+    ]);
+
+    expect(ranked).toHaveLength(0);
+  });
 });
 
 describe("vault flow", () => {

@@ -42,5 +42,6 @@ export function rankVaultEntries<T extends VaultIndexEntry>(
         finalScore
       };
     })
+    .filter((entry) => entry.lexicalScore > 0 || entry.keywordScore > 0)
     .sort((left, right) => right.finalScore - left.finalScore);
 }

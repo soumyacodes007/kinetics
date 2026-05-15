@@ -16,7 +16,7 @@ async function main() {
         name: "kinetics-mcp",
         version: "0.1.0"
     }, {
-        instructions: "This server manages private Kinetics memory vaults and public skill packs on 0G. Use memory_pass_list_plans before buying a pass. Use memory_pass_status before querying memory. Private memory tools operate on the configured wallet's vault only. Public skill tools search only preview manifests and mounted packs are session-local."
+        instructions: "This server manages private Kinetics memory vaults and public skill packs on 0G. Use memory_pass_list_plans before buying a pass. Use memory_pass_status before querying memory. Private memory tools operate on the configured wallet's vault only. Public skill tools search only preview manifests and mounted packs are session-local. When answering from memory, give only the direct answer the user asked for. Do not add follow-up suggestions, menus, or extra commentary unless the user explicitly asks for more detail. If a memory result includes useful provenance such as memory type, tags, or namespaces, mention it in one concise sentence only when it helps answer the question."
     });
     registerKineticsTools(server, service);
     const transport = new StdioServerTransport();

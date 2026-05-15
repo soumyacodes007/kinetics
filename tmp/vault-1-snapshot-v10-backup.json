@@ -1,0 +1,205 @@
+{
+  "vaultId": 1,
+  "version": 10,
+  "bytesUsed": 4441,
+  "writeCountCurrentPeriod": 10,
+  "merkleRoot": "0x008e34d7a7c5e9bc728409f6f685dfe6a3a40d8f6e7ff204265678e795d9dcb6",
+  "entries": [
+    {
+      "memoryId": "mem_mp5q17o0_ea1a1786",
+      "blobRoot": "0x4c1560549c5fa581250118b633468cd6c8c7360e80a70c563193c962b1a27215",
+      "memoryType": "semantic",
+      "title": "Preferred hackathon stack",
+      "summary": "My preferred hackathon stack is Foundry for contracts and Next.js for the frontend.",
+      "tags": [
+        "hackathon",
+        "foundry",
+        "nextjs"
+      ],
+      "namespaces": [
+        "personal",
+        "preferences"
+      ],
+      "createdAt": 1778777226,
+      "lastAccessedAt": 1778777226,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "mcp-e2e-test"
+    },
+    {
+      "memoryId": "mem_mp5q39qo_1e40d0f7",
+      "blobRoot": "0x0baabf50364e47049b6e5f01c1320a8a62b7330a08c6858e8eb0224e08ea1716",
+      "memoryType": "semantic",
+      "title": "Preferred hackathon stack",
+      "summary": "My preferred hackathon stack is Foundry for contracts and Next.js for the frontend.",
+      "tags": [
+        "hackathon",
+        "foundry",
+        "nextjs"
+      ],
+      "namespaces": [
+        "personal",
+        "preferences"
+      ],
+      "createdAt": 1778777322,
+      "lastAccessedAt": 1778777322,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "mcp-e2e-test"
+    },
+    {
+      "memoryId": "mem_mp5qtw2o_6d528156",
+      "blobRoot": "0xcb2fc553d5754dc80eca73591f0d872fadc748312b27b4a510b8dc23cfaf31bb",
+      "memoryType": "episodic",
+      "title": "fast-path-1778778559647",
+      "summary": "This memory verifies the MVP fast path marker fast-path-1778778559647 and should only sync cross-client after memory_pu…",
+      "tags": [
+        "fast-path",
+        "fast-path-1778778559647"
+      ],
+      "namespaces": [
+        "mvp",
+        "latency"
+      ],
+      "createdAt": 1778778564,
+      "lastAccessedAt": 1778778564,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "openclaw-fast-path"
+    },
+    {
+      "memoryId": "mem_mp5qwb9k_67d0e559",
+      "blobRoot": "0xc7613b47aea5c0b0a01ff0fb4783af058283ad1311002e597f6a15ec697f48f5",
+      "memoryType": "episodic",
+      "title": "fast-path-1778778672621",
+      "summary": "This memory verifies the MVP fast path marker fast-path-1778778672621 and should only sync cross-client after memory_pu…",
+      "tags": [
+        "fast-path",
+        "fast-path-1778778672621"
+      ],
+      "namespaces": [
+        "mvp",
+        "latency"
+      ],
+      "createdAt": 1778778677,
+      "lastAccessedAt": 1778778677,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "openclaw-fast-path"
+    },
+    {
+      "memoryId": "mem_mp5r2rio_8425a336",
+      "blobRoot": "0x5a7521eb965631d256f64dd655e8c50c985caca7a42e7735aca0edbee6e05534",
+      "memoryType": "episodic",
+      "title": "fast-path-1778778973802",
+      "summary": "This memory verifies the MVP fast path marker fast-path-1778778973802 and should only sync cross-client after memory_pu…",
+      "tags": [
+        "fast-path",
+        "fast-path-1778778973802"
+      ],
+      "namespaces": [
+        "mvp",
+        "latency"
+      ],
+      "createdAt": 1778778978,
+      "lastAccessedAt": 1778778978,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "openclaw-fast-path"
+    },
+    {
+      "memoryId": "mem_mp5r5bc8_09d24075",
+      "blobRoot": "0xbdcfad9894118f16d610918268e8cb5ae4a74034b3b7f25e6a528aaef14a2523",
+      "memoryType": "episodic",
+      "title": "fast-path-1778779097350",
+      "summary": "Marker fast-path-1778779097350",
+      "tags": [
+        "fast-path",
+        "fast-path-1778779097350"
+      ],
+      "namespaces": [
+        "mvp"
+      ],
+      "createdAt": 1778779097,
+      "lastAccessedAt": 1778779097,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "openclaw-fast-path"
+    },
+    {
+      "memoryId": "mem_mp5r7wpc_ee5798a2",
+      "blobRoot": "0x4c85bee27caabd85f34fc5a5730eb3edc886bcc6cd1cb4f1048a1c6277c423b9",
+      "memoryType": "episodic",
+      "title": "isolated-1778779216084",
+      "summary": "Marker isolated-1778779216084",
+      "tags": [
+        "isolated-1778779216084"
+      ],
+      "namespaces": [
+        "mvp"
+      ],
+      "createdAt": 1778779218,
+      "lastAccessedAt": 1778779218,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "openclaw-1778779216084"
+    },
+    {
+      "memoryId": "mem_mp5rfqc8_c20d68e7",
+      "blobRoot": "0x445c5c45eaffef1376cb28ae3190a6a47a31e34b60342a35a12e474ce1941500",
+      "memoryType": "episodic",
+      "title": "latency-1778779581096",
+      "summary": "Latency measurement marker latency-1778779581096",
+      "tags": [
+        "latency-1778779581096",
+        "latency"
+      ],
+      "namespaces": [
+        "mvp"
+      ],
+      "createdAt": 1778779583,
+      "lastAccessedAt": 1778779583,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "writer-1778779581096"
+    },
+    {
+      "memoryId": "mem_mp5rs18o_7221faa1",
+      "blobRoot": "0x3bb24b480e424261a1ca7c082af22c52d20bab226eb02d1623f1df1b7fae10dc",
+      "memoryType": "episodic",
+      "title": "nofinality-1778780155422",
+      "summary": "No-finality latency marker nofinality-1778780155422",
+      "tags": [
+        "nofinality-1778780155422",
+        "latency"
+      ],
+      "namespaces": [
+        "mvp"
+      ],
+      "createdAt": 1778780157,
+      "lastAccessedAt": 1778780157,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "writer-1778780155422"
+    },
+    {
+      "memoryId": "mem_mp61ok48_4f5abb4c",
+      "blobRoot": "0x128d15f7c654299357fad050e8760ef602b33f6523ea9aabe8098ffc38533a88",
+      "memoryType": "episodic",
+      "title": "QA Memory",
+      "summary": "Real wallet QA memory token kinetics-live-qa-foundry-nextjs",
+      "tags": [
+        "qa",
+        "frontend"
+      ],
+      "namespaces": [
+        "demo"
+      ],
+      "createdAt": 1778796791,
+      "lastAccessedAt": 1778796791,
+      "strength": 0.5,
+      "stale": false,
+      "sourceClient": "real-wallet-qa"
+    }
+  ]
+}
