@@ -66,21 +66,21 @@ Kinetics uses 0G because the product needs all of these at once:
 
 ```mermaid
 flowchart LR
-  U[User Wallet] --> W[Web App]
-  U --> M[MCP Client]
+  U["User Wallet"] --> W["Web App"]
+  U --> M["MCP Client"]
 
-  W --> C[@kinetics/core]
-  M --> S[@kinetics/mcp-server]
+  W --> C["@kinetics/core"]
+  M --> S["@kinetics/mcp-server"]
   S --> C
 
-  C --> A[@kinetics/abi]
-  C --> ZS[0G Storage]
-  C --> ZC[0G Chain]
+  C --> A["@kinetics/abi"]
+  C --> ZS["0G Storage"]
+  C --> ZC["0G Chain"]
 
-  ZC --> MP[MemoryPass]
-  ZC --> MR[MemoryRegistry]
-  ZC --> KP[KnowledgePackNFT]
-  ZC --> PL[PackLicenseRegistry]
+  ZC --> MP["MemoryPass"]
+  ZC --> MR["MemoryRegistry"]
+  ZC --> KP["KnowledgePackNFT"]
+  ZC --> PL["PackLicenseRegistry"]
 ```
 
 ## Memory Flow
@@ -89,9 +89,9 @@ flowchart LR
 sequenceDiagram
   participant User
   participant ClientA as Writer Client / Codex
-  participant Core as @kinetics/core
-  participant Storage as 0G Storage
-  participant Chain as 0G Chain
+  participant Core as "@kinetics/core"
+  participant Storage as "0G Storage"
+  participant Chain as "0G Chain"
   participant ClientB as Reader Client / Claude
 
   User->>ClientA: Buy Memory Pass
@@ -114,9 +114,9 @@ sequenceDiagram
 sequenceDiagram
   participant Creator
   participant Buyer
-  participant Core as @kinetics/core
-  participant Storage as 0G Storage
-  participant Chain as 0G Chain
+  participant Core as "@kinetics/core"
+  participant Storage as "0G Storage"
+  participant Chain as "0G Chain"
 
   Creator->>Core: skill_publish(draft)
   Core->>Storage: upload preview + bundle
